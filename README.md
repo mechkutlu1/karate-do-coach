@@ -14,12 +14,6 @@ mark by replacing the `icon-*.png` files and the inline SVG in `index.html`.
 - `index.html` — the whole app (camera, pose, coaching engine, UI).
 - `manifest.webmanifest`, `sw.js`, `icon-*.png` — installable PWA + offline shell.
 
-## Deploy to GitHub Pages
-1. Create a public repo and upload **the contents of this folder** to the repo root
-   (so `index.html` is at the top level).
-2. Settings → Pages → Deploy from a branch → `main` / `(root)` → Save.
-3. Open `https://<username>.github.io/<repo>/` — HTTPS is automatic, so the camera works.
-
 ## Install on the phone
 Open the Pages URL, then Android/Chrome → *Install app*; iPhone/Safari → Share →
 *Add to Home Screen*.
