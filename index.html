@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#0E0F12" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<title>Karate-Dō Coach — Sayokan</title>
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" type="image/png" href="icon-192.png" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders:opsz,wght@10..72,500;10..72,800;10..72,900&family=Archivo:wght@400;600;700&family=Noto+Serif+JP:wght@700;900&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --ink:#0E0F12; --panel:#181A1F; --panel-2:#212430; --line:#343846;
+    --chalk:#F4F1EA; --chalk-dim:#9A9AA2;
+    --accent:#D6272B; --accent-soft:rgba(214,39,43,.16);
+    --grade-a:#43D477; --grade-b:#F5B921; --grade-c:#FF7A45;
+    --display:"Big Shoulders", sans-serif; --body:"Archivo", sans-serif; --jp:"Noto Serif JP", serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{background:var(--ink);color:var(--chalk);font-family:var(--body);font-size:15px;line-height:1.5;
+    display:flex;flex-direction:column;min-height:100dvh;position:relative;overflow-x:hidden;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+  .bg-stripes{position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.4;
+    background:repeating-linear-gradient(-55deg,transparent 0 90px,var(--accent-soft) 90px 96px);
+    -webkit-mask-image:linear-gradient(180deg,black,transparent 65%);mask-image:linear-gradient(180deg,black,transparent 65%)}
+  .topbar,.picker,.stage-wrap,.foot{position:relative;z-index:1}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1rem 1.1rem .5rem}
+  .brand{display:flex;align-items:center;gap:.65rem}
+  .mark{width:40px;height:40px;flex:none}
+  .mark .enso{fill:none;stroke:var(--accent);stroke-width:5;stroke-linecap:round}
+  .mark .kanji{fill:var(--chalk);font-family:var(--jp);font-weight:900}
+  .brand h1{font-family:var(--display);font-weight:900;font-size:1.7rem;letter-spacing:.04em;text-transform:uppercase;line-height:1}
+  .brand h1 em{font-style:normal;color:var(--accent)}
+  .brand small{display:block;font-family:var(--body);font-weight:700;font-size:.6rem;letter-spacing:.28em;color:var(--chalk-dim);text-transform:uppercase;margin-top:2px}
+  .tagline{color:var(--chalk-dim);font-size:.72rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;text-align:right;line-height:1.45}
+
+  .picker{display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem;padding:.6rem 1.1rem .9rem;max-width:860px;width:100%;margin:0 auto}
+  .card{position:relative;display:flex;flex-direction:column;align-items:center;gap:.15rem;
+    background:linear-gradient(180deg,var(--panel-2),var(--panel));border:1px solid var(--line);
+    border-radius:14px;padding:.6rem .3rem .5rem;cursor:pointer;color:var(--chalk-dim);
+    transition:color .16s,border-color .16s,box-shadow .16s,transform .12s}
+  .card:active{transform:scale(.97)}
+  .card .jp{font-family:var(--jp);font-weight:700;font-size:1.5rem;line-height:1;color:currentColor}
+  .card-name{font-family:var(--display);font-weight:800;font-size:.78rem;letter-spacing:.05em;text-transform:uppercase}
+  .card.is-active{color:var(--chalk);border-color:var(--accent);box-shadow:0 0 0 1px var(--accent),0 6px 22px -6px var(--accent)}
+  .card.is-active .jp{color:var(--accent)}
+  .card:focus-visible,.btn:focus-visible{outline:2px solid var(--chalk);outline-offset:2px}
+
+  .stage-wrap{flex:1;padding:0 1.1rem;max-width:860px;width:100%;margin:0 auto}
+  .stage{position:relative;background:#000;border:1px solid var(--line);border-radius:18px;overflow:hidden;
+    aspect-ratio:3/4;max-height:68dvh;margin:0 auto;box-shadow:0 0 0 1px rgba(0,0,0,.6),0 10px 40px -12px var(--accent-soft)}
+  @media (min-width:700px){.stage{aspect-ratio:16/10}}
+  #video,#overlay{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  #video.mirrored{transform:scaleX(-1)}
+  .rep-flash{position:absolute;inset:0;opacity:0;pointer-events:none;background:var(--accent)}
+  .rep-flash.go{animation:flash 300ms ease-out}
+  @keyframes flash{0%{opacity:.32}100%{opacity:0}}
+
+  .hud{position:absolute;background:rgba(14,15,18,.72);backdrop-filter:blur(6px);border:1px solid rgba(244,241,234,.12)}
+  .hud-label{font-size:.6rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--chalk-dim)}
+  .hud-reps{left:.9rem;bottom:.9rem;width:clamp(104px,30vw,132px);aspect-ratio:1;border-radius:50%;display:grid;place-items:center}
+  .rom-ring{position:absolute;inset:4px;transform:rotate(-90deg)}
+  .rom-ring circle{fill:none;stroke-width:7}
+  .ring-bg{stroke:rgba(244,241,234,.14)}
+  .ring-fg{stroke:var(--accent);stroke-linecap:round;stroke-dasharray:326.7;stroke-dashoffset:326.7;
+    transition:stroke-dashoffset 90ms linear;filter:drop-shadow(0 0 6px var(--accent))}
+  .rep-inner{display:flex;flex-direction:column;align-items:center}
+  .hud-value{font-family:var(--display);font-weight:900;font-size:clamp(2.4rem,10vw,3.4rem);line-height:.9;color:var(--chalk);font-variant-numeric:tabular-nums}
+  .hud-value.pulse{animation:pulse 320ms cubic-bezier(.2,.8,.3,1.4)}
+  @keyframes pulse{0%{transform:scale(1.3);color:var(--accent)}100%{transform:scale(1)}}
+
+  .hud-score{right:.9rem;bottom:.9rem;border-radius:12px;padding:.55rem .8rem;display:flex;flex-direction:column;gap:.35rem;min-width:112px}
+  .score-row{display:flex;align-items:baseline;justify-content:space-between;gap:.7rem}
+  .score-value{font-family:var(--display);font-weight:900;font-size:1.9rem;line-height:1;font-variant-numeric:tabular-nums;color:var(--chalk)}
+  .score-value--avg{font-size:1.3rem;color:var(--chalk-dim)}
+  .score-value.grade-a{color:var(--grade-a);text-shadow:0 0 12px rgba(67,212,119,.5)}
+  .score-value.grade-b{color:var(--grade-b);text-shadow:0 0 12px rgba(245,185,33,.45)}
+  .score-value.grade-c{color:var(--grade-c);text-shadow:0 0 12px rgba(255,122,69,.45)}
+
+  .hud-phase{top:.9rem;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:.5rem;border-radius:999px;
+    padding:.4rem 1rem;font-family:var(--display);font-weight:800;font-size:1rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);white-space:nowrap}
+  .phase-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:blink 1.1s ease-in-out infinite}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+  @media (prefers-reduced-motion:reduce){.hud-value.pulse,.rep-flash.go,.phase-dot{animation:none}}
+
+  .stage-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;
+    padding:2rem;text-align:center;background:linear-gradient(180deg,rgba(14,15,18,.9),rgba(14,15,18,.97));color:var(--chalk-dim)}
+  .stage-empty.hidden{display:none}
+  .empty-figure{width:66px;height:66px;fill:none;stroke:var(--accent);stroke-width:4;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 10px var(--accent-soft))}
+
+  .controls{display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap;padding:.9rem 0}
+  .btn{font-family:var(--display);font-weight:800;font-size:1rem;letter-spacing:.08em;text-transform:uppercase;color:var(--chalk);
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:.6rem 1.2rem;cursor:pointer;
+    transition:border-color .15s,box-shadow .15s,transform .12s}
+  .btn:active{transform:scale(.97)}
+  .btn:not(:disabled):hover{border-color:var(--accent)}
+  .btn:disabled{opacity:.35;cursor:not-allowed}
+  .btn-primary{background:var(--accent);border-color:var(--accent);color:#0E0F12;font-size:1.15rem;padding:.75rem 1.8rem;box-shadow:0 8px 26px -8px var(--accent)}
+  .btn-quiet{color:var(--chalk-dim)}
+
+  .coach{border-top:1px solid var(--line);padding:.9rem 0 .4rem}
+  .coach h2{font-family:var(--display);font-weight:800;font-size:1.05rem;letter-spacing:.14em;text-transform:uppercase;color:var(--chalk-dim);margin-bottom:.5rem}
+  .coach ul{list-style:none}
+  .coach li{padding:.5rem 0;border-bottom:1px dashed var(--line);font-size:.9rem}
+  .coach li:last-child{border-bottom:0}
+  .note-head{display:flex;align-items:center;gap:.6rem;margin-bottom:.3rem}
+  .note-rep{font-family:var(--display);font-weight:800;font-size:.85rem;letter-spacing:.04em;text-transform:uppercase;color:var(--chalk-dim);flex:none;min-width:96px}
+  .note-bar{flex:1;height:6px;border-radius:3px;background:var(--panel-2);overflow:hidden}
+  .note-bar i{display:block;height:100%;border-radius:3px;background:var(--grade-b)}
+  .note-bar.grade-a i{background:var(--grade-a)}
+  .note-bar.grade-c i{background:var(--grade-c)}
+  .note-score{font-family:var(--display);font-weight:900;font-size:1.05rem;font-variant-numeric:tabular-nums;flex:none}
+  .note-score.grade-a{color:var(--grade-a)}.note-score.grade-b{color:var(--grade-b)}.note-score.grade-c{color:var(--grade-c)}
+  .note-checks{display:flex;flex-wrap:wrap;gap:4px 6px;margin:.15rem 0 .35rem}
+  .chk{display:inline-flex;align-items:center;gap:5px;font-size:.66rem;letter-spacing:.04em;text-transform:uppercase;color:var(--chalk-dim)}
+  .chk .d{width:8px;height:8px;border-radius:50%;background:#43434f}
+  .chk.pass .d{background:var(--grade-a);box-shadow:0 0 6px var(--grade-a)}
+  .chk.warn .d{background:var(--grade-b);box-shadow:0 0 6px var(--grade-b)}
+  .chk.fix .d{background:var(--grade-c);box-shadow:0 0 6px var(--grade-c)}
+  .note-text{color:var(--chalk)}
+
+  .foot{padding:.7rem 1.1rem 1rem;color:var(--chalk-dim);font-size:.74rem;text-align:center}
+
+  .sheet{position:fixed;inset:0;z-index:20;background:rgba(8,8,10,.86);backdrop-filter:blur(14px);
+    display:flex;align-items:center;justify-content:center;padding:22px;opacity:0;pointer-events:none;transition:opacity .25s}
+  .sheet.open{opacity:1;pointer-events:auto}
+  .sheet-card{width:100%;max-width:440px;background:linear-gradient(180deg,#1c1e24,#141519);border:1px solid var(--line);
+    border-radius:22px;padding:22px;max-height:88vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+  .sheet-card h2{font-family:var(--display);font-weight:900;font-size:1.4rem;letter-spacing:.04em;text-transform:uppercase;margin-bottom:.6rem}
+  .field{margin:16px 0}
+  .field>label{font-size:.66rem;letter-spacing:.16em;text-transform:uppercase;color:var(--chalk-dim);display:block;margin-bottom:8px}
+  .seg{display:flex;background:rgba(0,0,0,.3);border-radius:12px;padding:4px;gap:4px}
+  .seg button{flex:1;border:0;background:transparent;color:var(--chalk);padding:10px;border-radius:9px;font-family:var(--body);font-weight:600;font-size:.8rem;cursor:pointer;opacity:.6}
+  .seg button.sel{background:var(--accent);color:#0E0F12;opacity:1}
+  .slider{width:100%;accent-color:var(--accent)}
+  .mini{font-size:.72rem;color:var(--chalk-dim);line-height:1.5;margin-top:6px}
+</style>
+</head>
+<body data-focus="freestyle">
+
+  <div class="bg-stripes" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 64 64" aria-hidden="true">
+        <path class="enso" d="M45 12 A26 26 0 1 0 52 40" />
+        <text class="kanji" x="32" y="43" text-anchor="middle" font-size="30">道</text>
+      </svg>
+      <div><h1>Karate<em>Dō</em></h1><small>Sayokan</small></div>
+    </div>
+    <p class="tagline">On-device pose AI<br />nothing leaves your phone</p>
+  </header>
+
+  <nav class="picker" aria-label="Choose a technique to drill">
+    <button class="card is-active" data-focus="freestyle"><span class="jp">基本</span><span class="card-name">Kihon</span></button>
+    <button class="card" data-focus="straight"><span class="jp">突き</span><span class="card-name">Tsuki</span></button>
+    <button class="card" data-focus="hook"><span class="jp">回し</span><span class="card-name">Mawashi</span></button>
+    <button class="card" data-focus="kick"><span class="jp">蹴り</span><span class="card-name">Geri</span></button>
+  </nav>
+
+  <main class="stage-wrap">
+    <div class="stage" id="stage">
+      <video id="video" playsinline muted></video>
+      <canvas id="overlay"></canvas>
+      <div class="rep-flash" id="repFlash" aria-hidden="true"></div>
+
+      <div class="hud hud-reps" aria-live="polite">
+        <svg class="rom-ring" viewBox="0 0 120 120" aria-hidden="true">
+          <circle class="ring-bg" cx="60" cy="60" r="52"/>
+          <circle class="ring-fg" id="romRing" cx="60" cy="60" r="52"/>
+        </svg>
+        <div class="rep-inner"><span class="hud-label">Waza</span><span class="hud-value" id="strikeCount">0</span></div>
+      </div>
+
+      <div class="hud hud-score">
+        <div class="score-row"><span class="hud-label">Last</span><span class="score-value" id="lastScore">—</span></div>
+        <div class="score-row"><span class="hud-label">Session</span><span class="score-value score-value--avg" id="avgScore">—</span></div>
+      </div>
+
+      <div class="hud hud-phase"><span class="phase-dot" aria-hidden="true"></span><span id="phaseText">Camera off</span></div>
+
+      <div class="stage-empty" id="stageEmpty">
+        <svg class="empty-figure" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="14" r="6"/><path d="M32 20 L32 40 M32 40 L24 56 M32 40 L40 56 M32 26 L18 30 M32 26 L46 30"/></svg>
+        <p id="emptyMsg">Prop the phone up and stand back so your whole body fits in the frame. Take your kamae, side-on to the camera, and strike with control.</p>
+        <button class="btn btn-primary" id="startBtn">Start camera</button>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="btn" id="flipBtn" disabled>Flip</button>
+      <button class="btn" id="resetBtn">Reset</button>
+      <button class="btn" id="setupBtn">Settings</button>
+      <button class="btn btn-quiet" id="stopBtn" disabled>Stop</button>
+    </div>
+
+    <section class="coach" id="coachPanel">
+      <h2>Waza notes</h2>
+      <ul id="coachList">
+        <li><span class="note-text">Start the camera and strike. Each tsuki (punch) or geri (kick) is detected, scored 0–100, and coached with one fix at a time — kime, hikite, dachi.</span></li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="foot"><p>Karate-Dō kihon fundamentals (Sayokan). Built with MediaPipe Pose Landmarker; all processing happens in your browser. Train with supervision and room to move.</p></footer>
+
+  <div class="sheet" id="setup">
+    <div class="sheet-card">
+      <h2>Coach setup</h2>
+      <div class="field"><label>Lead side (front hand &amp; foot)</label>
+        <div class="seg" id="leadSeg"><button data-v="left" class="sel">Left lead</button><button data-v="right">Right lead</button></div>
+        <div class="mini">Your front side in kamae. Kizami-zuki is the lead punch; gyaku-zuki is the reverse (rear) punch.</div></div>
+      <div class="field"><label>Technique sensitivity — <span id="sensVal">medium</span></label>
+        <input type="range" min="0" max="100" value="50" class="slider" id="sens" />
+        <div class="mini">Lower it for a young student or slow, controlled kihon; raise it if small movements trigger false counts.</div></div>
+      <div class="field"><label>Voice coaching</label>
+        <div class="seg" id="voiceSeg"><button data-v="on" class="sel">On</button><button data-v="off">Off</button></div></div>
+      <button class="btn btn-primary" id="closeSetup" style="width:100%;margin-top:8px">Done</button>
+    </div>
+  </div>
+
+<script type="module">
+import { PoseLandmarker, FilesetResolver }
+  from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
+
+/* ============================================================
+   Karate-Dō Coach (Sayokan) — kihon form trainer.
+   Same MediaPipe wiring as RepScore; rule-based per-technique
+   coaching for kizami/gyaku-zuki, mawashi-zuki and mae-geri
+   with hikite and dachi checks.
+   ============================================================ */
+
+const L = { nose:0, Lsh:11, Rsh:12, Lel:13, Rel:14, Lwr:15, Rwr:16,
+  Lhip:23, Rhip:24, Lkn:25, Rkn:26, Lank:27, Rank:28 };
+const SKELETON = [[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],
+  [23,25],[25,27],[24,26],[26,28],[27,31],[28,32]];
+
+const cfg = { lead:"left", sensitivity:0.5, voice:true, focus:"freestyle" };
+
+const $ = s => document.querySelector(s);
+const video=$("#video"), overlay=$("#overlay"), ctx=overlay.getContext("2d");
+const strikeCountEl=$("#strikeCount"), lastScoreEl=$("#lastScore"), avgScoreEl=$("#avgScore");
+const phaseEl=$("#phaseText"), coachList=$("#coachList"), romRing=$("#romRing"), repFlash=$("#repFlash");
+const stageEmpty=$("#stageEmpty"), emptyMsg=$("#emptyMsg");
+const startBtn=$("#startBtn"), stopBtn=$("#stopBtn"), flipBtn=$("#flipBtn"), resetBtn=$("#resetBtn"), setupBtn=$("#setupBtn");
+const RING_C = 2*Math.PI*52;
+
+const app = { landmarker:null, running:false, stream:null, facing:"user", mirrored:true,
+  count:0, scores:[], byTech:{}, lastVideoTime:-1, shEMA:0 };
+
+/* geometry */
+const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+function angle(a,b,c){ const v1={x:a.x-b.x,y:a.y-b.y},v2={x:c.x-b.x,y:c.y-b.y};
+  const d=(v1.x*v2.x+v1.y*v2.y)/((Math.hypot(v1.x,v1.y)*Math.hypot(v2.x,v2.y))||1e-9);
+  return Math.acos(Math.max(-1,Math.min(1,d)))*180/Math.PI; }
+const mid=(a,b)=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2});
+function torsoLean(p){ const s=mid(p[L.Lsh],p[L.Rsh]),h=mid(p[L.Lhip],p[L.Rhip]);
+  return Math.abs(Math.atan2(h.x-s.x,h.y-s.y))*180/Math.PI; }
+const torsoLen=p=>Math.max(1e-3,dist(mid(p[L.Lsh],p[L.Rsh]),mid(p[L.Lhip],p[L.Rhip])));
+
+const leadWrist=()=> cfg.lead==="left"?L.Lwr:L.Rwr;
+const rearWrist=()=> cfg.lead==="left"?L.Rwr:L.Lwr;
+const leadAnkle=()=> cfg.lead==="left"?L.Lank:L.Rank;
+const LIMBS = [L.Lwr,L.Rwr,L.Lank,L.Rank];
+const armOf =w=> w===L.Lwr?[L.Lsh,L.Lel,L.Lwr]:[L.Rsh,L.Rel,L.Rwr];
+const legOf =a=> a===L.Lank?[L.Lhip,L.Lkn,L.Lank]:[L.Rhip,L.Rkn,L.Rank];
+
+/* live joint status for skeleton colouring */
+const liveStatus={ stance:"", posture:"" };
+function liveColour(p){
+  const knee=Math.min(angle(p[L.Lhip],p[L.Lkn],p[L.Lank]),angle(p[L.Rhip],p[L.Rkn],p[L.Rank]));
+  liveStatus.stance = knee<150?"pass":knee<168?"warn":"fix";
+  const lean=torsoLean(p); liveStatus.posture = lean<16?"pass":lean<30?"warn":"fix";
+}
+
+/* technique state machine */
+const st = { phase:"IDLE", buf:[], striker:null, ready:null, maxV:0, cooldown:0, speed:{}, last:{} };
+LIMBS.forEach(id=>{ st.speed[id]=0; });
+function thresh(){ const s=cfg.sensitivity; return { trig:0.22-0.10*s, peak:0.85-0.45*s, low:0.09-0.03*s }; }
+let phaseHold=0;
+function setPhase(t){ if(phaseHold>Date.now()) return; phaseEl.textContent=t; }
+
+function processFrame(p){
+  const shW=Math.max(1e-3,Math.hypot(p[L.Lsh].x-p[L.Rsh].x,p[L.Lsh].y-p[L.Rsh].y));
+  app.shEMA = app.shEMA? app.shEMA*.9+shW*.1 : shW;
+  for(const id of LIMBS){ const cur=p[id], last=st.last[id];
+    let v=0; if(last) v=Math.hypot(cur.x-last.x,cur.y-last.y)/app.shEMA;
+    st.speed[id]=st.speed[id]*0.6+v*0.4; st.last[id]={x:cur.x,y:cur.y}; }
+  const vmax=Math.max(st.speed[L.Lwr],st.speed[L.Rwr],st.speed[L.Lank],st.speed[L.Rank]);
+  romRing.style.strokeDashoffset=RING_C*(1-Math.min(1,vmax/1.4));
+  liveColour(p);
+
+  const T=thresh();
+  const snap=(v)=>({p:p.map(k=>({x:k.x,y:k.y,z:k.z,visibility:k.visibility})),v});
+  if(st.cooldown>0) st.cooldown--;
+
+  switch(st.phase){
+    case "IDLE":
+      if(vmax<T.trig*0.7){ st.ready={shSpan:Math.abs(p[L.Lsh].x-p[L.Rsh].x)/torsoLen(p)}; }
+      if(vmax>T.trig && st.cooldown===0){
+        let s=L.Lwr,mv=-1; for(const id of LIMBS){ if(st.speed[id]>mv){mv=st.speed[id];s=id;} }
+        st.striker=s; st.phase="STRIKE"; st.buf=[snap(st.speed[s])]; st.maxV=st.speed[s];
+      } else setPhase("Kamae");
+      break;
+    case "STRIKE":
+      st.buf.push(snap(st.speed[st.striker])); if(st.speed[st.striker]>st.maxV) st.maxV=st.speed[st.striker];
+      if(st.buf.length>70){ st.phase="IDLE"; st.buf=[]; }
+      if(st.speed[st.striker]<T.low) st.phase="FINISH";
+      setPhase("Kiai!");
+      break;
+    case "FINISH":
+      st.buf.push(snap(st.speed[st.striker]));
+      setPhase("Kime");
+      if(st.speed[st.striker]<T.low){
+        if(st.maxV>T.peak && st.buf.length>=5) evaluateStrike(st.buf.slice(), st.striker);
+        st.phase="IDLE"; st.buf=[]; st.maxV=0; st.cooldown=12;
+      }
+      if(st.buf.length>95){ st.phase="IDLE"; st.buf=[]; st.maxV=0; }
+      break;
+  }
+}
+
+/* evaluation */
+function gr(id,label,pass,warn,fixTip,goodTip){ return {id,label,status:pass?"pass":warn?"warn":"fix",tip:fixTip,good:goodTip}; }
+function grL(id,label,level,fixTip,goodTip){ return {id,label,status:level,tip:fixTip,good:goodTip}; }
+function lvl(v,passT,warnT){ return v<passT?"pass":v<warnT?"warn":"fix"; }
+
+function evaluateStrike(buf, striker){
+  let impactIdx=0,mv=-1; buf.forEach((f,i)=>{ if(f.v>mv){mv=f.v;impactIdx=i;} });
+  const impact=buf[impactIdx].p, end=buf[buf.length-1].p;
+  const isPunch=(striker===L.Lwr||striker===L.Rwr);
+  const isLead =(striker===leadWrist()||striker===leadAnkle());
+  const tl=torsoLen(impact);
+  const results=[]; let name;
+
+  if(isPunch){
+    const arm=armOf(striker), other=(striker===L.Lwr?L.Rwr:L.Lwr);
+    const otherHip=(other===L.Lwr?L.Lhip:L.Rhip);
+    const elbow=angle(impact[arm[0]],impact[arm[1]],impact[arm[2]]);
+    const straight=elbow>150;
+    const reachI=Math.abs(impact[striker].x-impact[arm[0]].x);
+    const reachE=Math.abs(end[striker].x-end[arm[0]].x);
+    const knee=Math.min(angle(impact[L.Lhip],impact[L.Lkn],impact[L.Lank]),angle(impact[L.Rhip],impact[L.Rkn],impact[L.Rank]));
+    const lean=torsoLean(impact);
+    const hik=dist(impact[other],impact[otherHip])/tl;                 // hikite to hip
+    const shY=Math.min(impact[L.Lsh].y,impact[L.Rsh].y), hipY=Math.max(impact[L.Lhip].y,impact[L.Rhip].y);
+    const chestY=shY*0.6+hipY*0.4; const levelOff=Math.abs(impact[striker].y-chestY)/tl;
+
+    if(straight){
+      name=isLead?"Kizami-zuki":"Gyaku-zuki";
+      results.push(gr("kime","Kime",elbow>155,elbow>140,"Snap to full extension — kime.","Sharp kime."));
+      results.push(grL("hikite","Hikite",lvl(hik,0.55,0.8),"Pull your reaction hand to your hip — hikite.","Strong hikite."));
+      results.push(gr("chudan","Chudan",levelOff<0.30,levelOff<0.55,"Punch level to the chest (chudan).","On target, level."));
+      results.push(gr("dachi","Dachi",knee<150,knee<165,"Sink deeper into your stance (dachi).","Deep, stable stance."));
+      results.push(gr("posture","Posture",lean<16,lean<30,"Keep your spine upright.","Upright and centred."));
+    } else {
+      name="Mawashi-zuki";
+      const elH=Math.abs(impact[arm[1]].y-shY);
+      results.push(gr("bend","Elbow ~90",elbow>60&&elbow<120,elbow>45&&elbow<135,"Keep the elbow bent near 90° for mawashi.","Good round angle."));
+      results.push(gr("elh","Elbow up",elH<0.16*tl,elH<0.28*tl,"Bring the elbow up to shoulder height.","Elbow level."));
+      results.push(grL("hikite","Hikite",lvl(hik,0.6,0.85),"Pull the reaction hand to your hip.","Strong hikite."));
+      results.push(gr("dachi","Dachi",knee<155,knee<168,"Turn from a strong, sunk stance.","Turned from the base."));
+      results.push(gr("recover","Recover",reachE<reachI*0.8,reachE<reachI,"Bring the hand straight back on line.","Recovered on line."));
+    }
+  } else {
+    name="Mae-geri";
+    const leg=legOf(striker);
+    const kneeAng=angle(impact[leg[0]],impact[leg[1]],impact[leg[2]]);
+    let chamberMin=180; for(let i=0;i<=impactIdx;i++){ const f=buf[i].p; chamberMin=Math.min(chamberMin,angle(f[leg[0]],f[leg[1]],f[leg[2]])); }
+    const hipY=impact[leg[0]].y, ankY=impact[leg[2]].y;
+    const lean=torsoLean(impact);
+    const endKnee=angle(end[leg[0]],end[leg[1]],end[leg[2]]);
+    results.push(gr("chamber","Chamber",chamberMin<110,chamberMin<130,"Lift and fold the knee first — hiza.","Good chamber."));
+    results.push(gr("kekomi","Extend",kneeAng>150,kneeAng>135,"Snap the kick out fully.","Full snap."));
+    results.push(gr("height","Height",ankY<hipY,ankY<hipY+0.12*tl,"Aim mid-body — lift the kick higher.","Good height."));
+    results.push(gr("balance","Balance",lean<22,lean<35,"Stay upright over the standing leg.","Balanced and upright."));
+    results.push(gr("hikiashi","Re-chamber",endKnee<kneeAng-15,endKnee<kneeAng,"Re-chamber before you set down — hikiashi.","Clean re-chamber."));
+  }
+
+  const cat = (name==="Kizami-zuki"||name==="Gyaku-zuki") ? "straight" : name==="Mawashi-zuki" ? "hook" :
+              name==="Mae-geri" ? "kick" : "other";
+  if(cfg.focus!=="freestyle" && cat!==cfg.focus){
+    setPhase(name+" · off-drill"); phaseHold=Date.now()+1200; return;
+  }
+  score(name, results);
+}
+
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+function gradeClass(s){ return s>=85?"grade-a":s>=65?"grade-b":"grade-c"; }
+function setScore(el,s){ el.textContent=s; el.classList.remove("grade-a","grade-b","grade-c"); el.classList.add(gradeClass(s)); }
+
+function score(name, results){
+  const pts=results.reduce((s,r)=>s+(r.status==="pass"?1:r.status==="warn"?0.5:0),0);
+  const pct=Math.round(pts/results.length*100);
+  app.count++; app.scores.push(pct); app.byTech[name]=(app.byTech[name]||0)+1;
+
+  strikeCountEl.textContent=app.count;
+  setScore(lastScoreEl,pct);
+  avgScoreEl.textContent=Math.round(app.scores.reduce((a,b)=>a+b,0)/app.scores.length);
+  avgScoreEl.classList.remove("grade-a","grade-b","grade-c");
+
+  strikeCountEl.classList.remove("pulse"); void strikeCountEl.offsetWidth; strikeCountEl.classList.add("pulse");
+  repFlash.style.background = pct>=85?"var(--grade-a)":pct>=65?"var(--grade-b)":"var(--grade-c)";
+  repFlash.classList.remove("go"); void repFlash.offsetWidth; repFlash.classList.add("go");
+
+  const fail=results.find(r=>r.status==="fix")||results.find(r=>r.status==="warn");
+  const cue = !fail ? ("Clean "+name+" — again!") : fail.tip;
+  addNote(name,pct,cue,results);
+  setPhase(name+" · "+pct); phaseHold=Date.now()+1400;
+  if(cfg.voice){ const praise=!fail?pick(["Ippon!","Kime!","Yosh!"])+" ":(fail.status==="warn"?"Good. ":"Fix: "); speak(praise+(fail?fail.tip:"")); }
+}
+
+function addNote(name,pct,cue,results){
+  const g=gradeClass(pct);
+  const tag=name+" "+(app.byTech[name]||1);
+  const dots=results.map(r=>`<span class="chk ${r.status}"><span class="d"></span>${r.label}</span>`).join("");
+  const li=document.createElement("li");
+  li.innerHTML=`<div class="note-head"><span class="note-rep">${tag}</span>`+
+    `<span class="note-bar ${g}"><i style="width:${pct}%"></i></span>`+
+    `<span class="note-score ${g}">${pct}</span></div>`+
+    `<div class="note-checks">${dots}</div><span class="note-text">${cue}</span>`;
+  coachList.prepend(li);
+  while(coachList.children.length>8) coachList.removeChild(coachList.lastChild);
+}
+
+/* voice */
+let voices=[];
+function loadVoices(){ voices=speechSynthesis.getVoices?.()||[]; }
+if("speechSynthesis" in window){ loadVoices(); speechSynthesis.onvoiceschanged=loadVoices; }
+function speak(t){ if(!("speechSynthesis" in window))return; speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(t); u.rate=1.03; u.pitch=1.0;
+  const en=voices.find(v=>/en(-|_)?(GB|US)/i.test(v.lang)); if(en)u.voice=en; speechSynthesis.speak(u); }
+
+/* drawing */
+function toPixels(lm,vw,vh,cw,ch){ const scale=Math.max(cw/vw,ch/vh),dx=(vw*scale-cw)/2,dy=(vh*scale-ch)/2;
+  let x=lm.x*vw*scale-dx; const y=lm.y*vh*scale-dy; if(app.mirrored) x=cw-x; return {x,y}; }
+function fitCanvas(){ const r=overlay.getBoundingClientRect(); const dpr=Math.min(devicePixelRatio||1,2);
+  const w=Math.round(r.width*dpr),h=Math.round(r.height*dpr);
+  if(overlay.width!==w||overlay.height!==h){ overlay.width=w; overlay.height=h; } }
+const stColor=s=>s==="pass"?"#43D477":s==="warn"?"#F5B921":s==="fix"?"#FF7A45":"#D6272B";
+function drawFrame(lms){
+  const vw=video.videoWidth,vh=video.videoHeight,cw=overlay.width,ch=overlay.height;
+  ctx.clearRect(0,0,cw,ch); if(!lms) return;
+  const px=lms.map(lm=>toPixels(lm,vw,vh,cw,ch));
+  ctx.lineWidth=Math.max(3,cw*0.006); ctx.lineCap="round"; ctx.strokeStyle="rgba(244,241,234,.7)";
+  for(const [a,b] of SKELETON){ if((lms[a]?.visibility??1)<.4||(lms[b]?.visibility??1)<.4) continue;
+    ctx.beginPath(); ctx.moveTo(px[a].x,px[a].y); ctx.lineTo(px[b].x,px[b].y); ctx.stroke(); }
+  const colorFor=(i)=>{
+    if(i===L.Lkn||i===L.Rkn) return stColor(liveStatus.stance);
+    if(i===L.Lsh||i===L.Rsh||i===L.Lhip||i===L.Rhip) return stColor(liveStatus.posture);
+    return "rgba(214,39,43,.7)";
+  };
+  for(const i of Object.values(L)){ if((lms[i]?.visibility??1)<.4) continue;
+    ctx.beginPath(); ctx.arc(px[i].x,px[i].y,Math.max(4,cw*0.008),0,7); ctx.fillStyle=colorFor(i); ctx.fill(); }
+}
+
+/* MediaPipe + camera (RepScore setup, pinned @0.10.14) */
+async function ensureModel(){
+  if(app.landmarker) return;
+  phaseEl.textContent="Loading model…";
+  const vision=await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");
+  app.landmarker=await PoseLandmarker.createFromOptions(vision,{
+    baseOptions:{ modelAssetPath:"https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task", delegate:"GPU" },
+    runningMode:"VIDEO", numPoses:1 });
+}
+async function startCamera(){
+  try{
+    startBtn.textContent="Loading…";
+    await ensureModel();
+    if(app.stream) app.stream.getTracks().forEach(t=>t.stop());
+    app.stream=await navigator.mediaDevices.getUserMedia({ audio:false, video:{ facingMode:app.facing, width:{ideal:1280}, height:{ideal:720} } });
+    video.srcObject=app.stream; await video.play();
+    app.mirrored=app.facing==="user"; video.classList.toggle("mirrored",app.mirrored);
+    app.running=true; st.phase="IDLE"; st.last={}; LIMBS.forEach(id=>st.speed[id]=0);
+    stageEmpty.classList.add("hidden"); stopBtn.disabled=false; flipBtn.disabled=false;
+    phaseEl.textContent="Kamae";
+    requestAnimationFrame(loop);
+  }catch(err){
+    app.running=false; startBtn.textContent="Start camera";
+    stageEmpty.classList.remove("hidden");
+    emptyMsg.textContent="Camera or model failed to start. Allow camera access and make sure the page is served over HTTPS (GitHub Pages is).";
+    console.error(err);
+  }
+}
+function stopCamera(){
+  app.running=false;
+  if(app.stream){ app.stream.getTracks().forEach(t=>t.stop()); app.stream=null; }
+  ctx.clearRect(0,0,overlay.width,overlay.height);
+  phaseEl.textContent="Camera off"; startBtn.textContent="Start camera";
+  stopBtn.disabled=true; flipBtn.disabled=true; stageEmpty.classList.remove("hidden");
+}
+let loopToken=0;
+function loop(){
+  const my=++loopToken;
+  const tick=()=>{
+    if(my!==loopToken||!app.running) return;
+    if(app.landmarker && video.videoWidth>0 && video.currentTime!==app.lastVideoTime){
+      app.lastVideoTime=video.currentTime; fitCanvas();
+      const res=app.landmarker.detectForVideo(video,performance.now());
+      const p=res.landmarks?.[0];
+      if(!p){ drawFrame(null); if(phaseHold<Date.now()) phaseEl.textContent="Find the karateka"; }
+      else{
+        const vis=(p[L.Lsh].visibility+p[L.Rsh].visibility+p[L.Lhip].visibility+p[L.Rhip].visibility)/4;
+        if(vis<0.5){ if(phaseHold<Date.now()) phaseEl.textContent="Move into frame"; }
+        else processFrame(p);
+        drawFrame(p);
+      }
+    }
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
+/* UI */
+startBtn.addEventListener("click", startCamera);
+stopBtn.addEventListener("click", stopCamera);
+flipBtn.addEventListener("click", async ()=>{ app.facing=app.facing==="user"?"environment":"user"; if(app.stream) await startCamera(); });
+resetBtn.addEventListener("click", ()=>{
+  app.count=0; app.scores=[]; app.byTech={};
+  strikeCountEl.textContent="0"; lastScoreEl.textContent="—"; lastScoreEl.className="score-value";
+  avgScoreEl.textContent="—"; romRing.style.strokeDashoffset=RING_C;
+  coachList.innerHTML='<li><span class="note-text">Set reset. Perform a technique to see it scored.</span></li>';
+});
+setupBtn.addEventListener("click", ()=>$("#setup").classList.add("open"));
+$("#closeSetup").addEventListener("click", ()=>$("#setup").classList.remove("open"));
+function seg(id,cb){ $(id).addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b)return;
+  [...e.currentTarget.children].forEach(x=>x.classList.remove("sel")); b.classList.add("sel"); cb(b.dataset.v); }); }
+seg("#leadSeg", v=>cfg.lead=v);
+seg("#voiceSeg", v=>cfg.voice=(v==="on"));
+$("#sens").addEventListener("input",e=>{ cfg.sensitivity=e.target.value/100;
+  $("#sensVal").textContent=cfg.sensitivity<.34?"gentle":cfg.sensitivity<.67?"medium":"lively"; });
+document.querySelectorAll(".picker .card").forEach(card=>{
+  card.addEventListener("click",()=>{
+    document.querySelectorAll(".picker .card").forEach(c=>c.classList.remove("is-active"));
+    card.classList.add("is-active"); cfg.focus=card.dataset.focus; document.body.dataset.focus=cfg.focus;
+  });
+});
+window.addEventListener("resize",()=>{ if(app.running) fitCanvas(); });
+</script>
+<script>
+  if ("serviceWorker" in navigator) {
+    const hadController = !!navigator.serviceWorker.controller;
+    window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (hadController && !reloaded) { reloaded = true; location.reload(); }
+    });
+  }
+</script>
+</body>
+</html>

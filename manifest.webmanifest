@@ -1,0 +1,17 @@
+{
+  "name": "Karate-Dō Coach — Sayokan",
+  "short_name": "Karate-Dō",
+  "description": "Camera-based karate kihon form trainer. Detects and scores tsuki and geri with hikite and dachi feedback. Runs fully on-device with MediaPipe Pose.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0E0F12",
+  "theme_color": "#0E0F12",
+  "categories": ["sports", "education", "health"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
