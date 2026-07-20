@@ -62,6 +62,12 @@
   .rep-flash{position:absolute;inset:0;opacity:0;pointer-events:none;background:var(--accent)}
   .rep-flash.go{animation:flash 300ms ease-out}
   @keyframes flash{0%{opacity:.32}100%{opacity:0}}
+  .corner{position:absolute;width:24px;height:24px;pointer-events:none;z-index:1;
+    border:0 solid rgba(214,39,43,.75)}
+  .corner.tl{top:10px;left:10px;border-top-width:2px;border-left-width:2px;border-top-left-radius:7px}
+  .corner.tr{top:10px;right:10px;border-top-width:2px;border-right-width:2px;border-top-right-radius:7px}
+  .corner.bl{bottom:10px;left:10px;border-bottom-width:2px;border-left-width:2px;border-bottom-left-radius:7px}
+  .corner.br{bottom:10px;right:10px;border-bottom-width:2px;border-right-width:2px;border-bottom-right-radius:7px}
 
   .hud{position:absolute;background:rgba(14,15,18,.72);backdrop-filter:blur(6px);border:1px solid rgba(244,241,234,.12)}
   .hud-label{font-size:.6rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--chalk-dim)}
@@ -90,7 +96,25 @@
   @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
   @media (prefers-reduced-motion:reduce){.hud-value.pulse,.rep-flash.go,.phase-dot{animation:none}}
 
-  .stage-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;
+  /* Sensei demo card — how to do the movement */
+  .sensei{position:absolute;top:3.2rem;right:.7rem;width:168px;z-index:2;border-radius:14px;
+    background:rgba(14,15,18,.8);backdrop-filter:blur(8px);border:1px solid rgba(244,241,234,.14);
+    padding:10px 10px 9px;display:flex;flex-direction:column;gap:7px;box-shadow:0 8px 28px -10px rgba(0,0,0,.7)}
+  .sensei.hidden{display:none}
+  .sensei-head{display:flex;align-items:baseline;justify-content:space-between;gap:6px}
+  .sensei-jp{font-family:var(--jp);font-weight:900;font-size:15px;color:var(--accent);line-height:1}
+  .sensei-name{font-family:var(--display);font-weight:800;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--chalk)}
+  #senseiCanvas{width:100%;aspect-ratio:300/236;background:rgba(244,241,234,.04);border-radius:9px;border:1px solid rgba(244,241,234,.08)}
+  .sensei-phases{display:grid;grid-template-columns:repeat(4,1fr);gap:3px}
+  .sensei-phases span{text-align:center;font-size:8.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+    padding:4px 0 3px;border-radius:0 0 5px 5px;border-top:2px solid rgba(244,241,234,.16);color:#6d6e76}
+  .sensei-phases span.on{border-top-color:var(--accent);color:var(--chalk);background:var(--accent-soft)}
+  .sensei-checks{display:flex;flex-wrap:wrap;gap:3px 8px}
+  .sensei-checks span{display:inline-flex;align-items:center;gap:4px;font-size:8.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--chalk-dim)}
+  .sensei-checks i{width:6px;height:6px;border-radius:50%;background:rgba(214,39,43,.85);flex:none}
+  @media (max-width:400px){.sensei{width:148px}}
+
+  .stage-empty{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;
     padding:2rem;text-align:center;background:linear-gradient(180deg,rgba(14,15,18,.9),rgba(14,15,18,.97));color:var(--chalk-dim)}
   .stage-empty.hidden{display:none}
   .empty-figure{width:66px;height:66px;fill:none;stroke:var(--accent);stroke-width:4;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 10px var(--accent-soft))}
@@ -170,6 +194,10 @@
       <video id="video" playsinline muted></video>
       <canvas id="overlay"></canvas>
       <div class="rep-flash" id="repFlash" aria-hidden="true"></div>
+      <div class="corner tl" aria-hidden="true"></div>
+      <div class="corner tr" aria-hidden="true"></div>
+      <div class="corner bl" aria-hidden="true"></div>
+      <div class="corner br" aria-hidden="true"></div>
 
       <div class="hud hud-reps" aria-live="polite">
         <svg class="rom-ring" viewBox="0 0 120 120" aria-hidden="true">
@@ -185,6 +213,13 @@
       </div>
 
       <div class="hud hud-phase"><span class="phase-dot" aria-hidden="true"></span><span id="phaseText">Camera off</span></div>
+
+      <aside class="sensei hidden" id="sensei" aria-label="Technique demonstration">
+        <div class="sensei-head"><span class="sensei-jp" id="senseiJp">基本</span><span class="sensei-name" id="senseiName">Kihon</span></div>
+        <canvas id="senseiCanvas" width="300" height="236"></canvas>
+        <div class="sensei-phases" id="senseiPhases"></div>
+        <div class="sensei-checks" id="senseiChecks"></div>
+      </aside>
 
       <div class="stage-empty" id="stageEmpty">
         <svg class="empty-figure" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="14" r="6"/><path d="M32 20 L32 40 M32 40 L24 56 M32 40 L40 56 M32 26 L18 30 M32 26 L46 30"/></svg>
@@ -221,6 +256,9 @@
         <div class="mini">Lower it for a young student or slow, controlled kihon; raise it if small movements trigger false counts.</div></div>
       <div class="field"><label>Voice coaching</label>
         <div class="seg" id="voiceSeg"><button data-v="on" class="sel">On</button><button data-v="off">Off</button></div></div>
+      <div class="field"><label>Sensei demo card</label>
+        <div class="seg" id="senseiSeg"><button data-v="on" class="sel">Show</button><button data-v="off">Hide</button></div>
+        <div class="mini">A looping figure demonstrating the selected technique, with its phases and the checkpoints being scored.</div></div>
       <button class="btn btn-primary" id="closeSetup" style="width:100%;margin-top:8px">Done</button>
     </div>
   </div>
@@ -241,7 +279,7 @@ const L = { nose:0, Lsh:11, Rsh:12, Lel:13, Rel:14, Lwr:15, Rwr:16,
 const SKELETON = [[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],
   [23,25],[25,27],[24,26],[26,28],[27,31],[28,32]];
 
-const cfg = { lead:"left", sensitivity:0.5, voice:true, focus:"freestyle" };
+const cfg = { lead:"left", sensitivity:0.5, voice:true, focus:"freestyle", sensei:true };
 
 const $ = s => document.querySelector(s);
 const video=$("#video"), overlay=$("#overlay"), ctx=overlay.getContext("2d");
@@ -460,6 +498,91 @@ function drawFrame(lms){
     ctx.beginPath(); ctx.arc(px[i].x,px[i].y,Math.max(4,cw*0.008),0,7); ctx.fillStyle=colorFor(i); ctx.fill(); }
 }
 
+/* ============================================================
+   Sensei demo card — looping figure showing how to do the
+   selected technique, with phase timeline + scored checkpoints.
+   ============================================================ */
+const SENSEI_TEMPO = 1.2;
+const SP = {
+  K:{head:[46,13],neck:[46,23],hip:[44,54],elA:[40,33],wrA:[49,29],elB:[54,31],wrB:[60,25],knF:[56,72],anF:[60,91],knR:[35,72],anR:[27,91]},
+  GX:{head:[50,13],neck:[50,23],hip:[47,54],elA:[62,26],wrA:[77,25],elB:[43,38],wrB:[42,51],knF:[58,72],anF:[62,91],knR:[36,73],anR:[25,91]},
+  MX:{head:[50,13],neck:[50,23],hip:[47,54],elA:[63,22],wrA:[72,30],elB:[43,38],wrB:[42,51],knF:[58,72],anF:[62,91],knR:[36,73],anR:[25,91]},
+  CH:{head:[47,13],neck:[47,23],hip:[45,52],elA:[40,33],wrA:[49,29],elB:[54,31],wrB:[60,25],knF:[57,42],anF:[52,57],knR:[41,72],anR:[38,91]},
+  GE:{head:[44,14],neck:[45,24],hip:[45,51],elA:[39,34],wrA:[48,30],elB:[53,32],wrB:[59,26],knF:[59,40],anF:[79,37],knR:[41,72],anR:[38,91]} };
+const ST = {
+  gyaku:{name:"Gyaku-zuki",jp:"逆突き",hot:"wrA",phases:["Kamae","Tsuki","Kime","Modori"],
+    checks:["Kime","Hikite","Chudan","Dachi","Posture"],
+    frames:[[850,"K",0],[200,"GX",1],[560,"GX",2],[420,"K",3]]},
+  mawashi:{name:"Mawashi-zuki",jp:"回し突き",hot:"wrA",phases:["Kamae","Furi","Kime","Modori"],
+    checks:["Elbow 90°","Elbow up","Hikite","Dachi","Recover"],
+    frames:[[850,"K",0],[240,"MX",1],[560,"MX",2],[420,"K",3]]},
+  geri:{name:"Mae-geri",jp:"前蹴り",hot:"anF",phases:["Kamae","Hiza","Kekomi","Hikiashi"],
+    checks:["Chamber","Extend","Height","Balance","Re-chamber"],
+    frames:[[850,"K",0],[320,"CH",1],[190,"GE",2],[480,"GE",2],[300,"CH",3],[360,"K",3]]} };
+const FOCUS2TECH = { freestyle:null, straight:"gyaku", hook:"mawashi", kick:"geri" };
+const SENSEI_CYCLE = ["gyaku","mawashi","geri"];
+
+const senseiEl=$("#sensei"), sCanvas=$("#senseiCanvas"), sCtx=sCanvas.getContext("2d");
+const sJp=$("#senseiJp"), sName=$("#senseiName"), sPhases=$("#senseiPhases"), sChecks=$("#senseiChecks");
+const sensei={ key:"gyaku", i:0, t0:performance.now(), from:SP.K, cyc:0, pi:-1 };
+
+const sEase=t=>t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+function sLerp(a,b,t){ const o={}; for(const k in a){ o[k]=[a[k][0]+(b[k][0]-a[k][0])*t,a[k][1]+(b[k][1]-a[k][1])*t]; } return o; }
+
+function senseiHeader(){
+  const T=ST[sensei.key];
+  sJp.textContent=T.jp; sName.textContent=T.name;
+  sPhases.style.gridTemplateColumns=`repeat(${T.phases.length},1fr)`;
+  sPhases.innerHTML=T.phases.map(p=>`<span>${p}</span>`).join("");
+  sChecks.innerHTML=T.checks.map(c=>`<span><i></i>${c}</span>`).join("");
+  sensei.pi=-1;
+}
+function senseiSet(focus){
+  sensei.key=FOCUS2TECH[focus]||SENSEI_CYCLE[0]; sensei.cyc=0;
+  sensei.i=0; sensei.from=SP.K; sensei.t0=performance.now();
+  senseiHeader();
+}
+function senseiDraw(k,hot){
+  const c=sCtx,W=sCanvas.width,H=sCanvas.height; c.clearRect(0,0,W,H);
+  const s=Math.min(W/78,H/98); const ox=W/2-52*s; const oy=H-(H-92*s)/2-92*s;
+  const P=n=>[ox+k[n][0]*s,oy+k[n][1]*s];
+  c.strokeStyle="rgba(244,241,234,.14)"; c.lineWidth=Math.max(1,.4*s);
+  c.beginPath(); c.moveTo(ox+8*s,oy+93.5*s); c.lineTo(ox+96*s,oy+93.5*s); c.stroke();
+  c.lineCap="round"; c.lineJoin="round"; c.strokeStyle="#F4F1EA"; c.lineWidth=2.1*s;
+  const seg=(a,b)=>{ const A=P(a),B=P(b); c.beginPath(); c.moveTo(A[0],A[1]); c.lineTo(B[0],B[1]); c.stroke(); };
+  seg("neck","hip"); seg("neck","elB"); seg("elB","wrB"); seg("hip","knR"); seg("knR","anR");
+  seg("hip","knF"); seg("knF","anF"); seg("neck","elA"); seg("elA","wrA");
+  const hd=P("head"); c.fillStyle="#F4F1EA"; c.beginPath(); c.arc(hd[0],hd[1],3.6*s,0,7); c.fill();
+  for(const [n,r] of [["wrB",1.5],["wrA",1.8],["anF",hot==="anF"?1.8:0]]){
+    if(!r) continue; const p=P(n); c.fillStyle="#D6272B";
+    if(hot===n){ c.shadowColor="#D6272B"; c.shadowBlur=6*s; }
+    c.beginPath(); c.arc(p[0],p[1],r*s,0,7); c.fill(); c.shadowBlur=0;
+  }
+}
+function senseiTick(now){
+  if(cfg.sensei && !senseiEl.classList.contains("hidden")){
+    let T=ST[sensei.key]; let fr=T.frames[sensei.i];
+    let t=(now-sensei.t0)/(fr[0]/SENSEI_TEMPO);
+    if(t>=1){
+      sensei.from=SP[fr[1]]; sensei.i++; sensei.t0=now; t=0;
+      if(sensei.i>=T.frames.length){
+        sensei.i=0;
+        if(cfg.focus==="freestyle"){ sensei.cyc++; const nk=SENSEI_CYCLE[sensei.cyc%3];
+          if(nk!==sensei.key){ sensei.key=nk; senseiHeader(); } }
+      }
+    }
+    T=ST[sensei.key]; fr=T.frames[sensei.i];
+    if(fr[2]!==sensei.pi){ sensei.pi=fr[2];
+      [...sPhases.children].forEach((el,i)=>el.classList.toggle("on",i===fr[2])); }
+    const k=sLerp(sensei.from,SP[fr[1]],sEase(Math.min(1,Math.max(0,t))));
+    senseiDraw(k, fr[2]===2?T.hot:null);
+  }
+  requestAnimationFrame(senseiTick);
+}
+senseiHeader();
+requestAnimationFrame(senseiTick);
+function senseiVisibility(){ senseiEl.classList.toggle("hidden", !(cfg.sensei && app.running)); }
+
 /* MediaPipe + camera (RepScore setup, pinned @0.10.14) */
 async function ensureModel(){
   if(app.landmarker) return;
@@ -479,11 +602,13 @@ async function startCamera(){
     app.mirrored=app.facing==="user"; video.classList.toggle("mirrored",app.mirrored);
     app.running=true; st.phase="IDLE"; st.last={}; LIMBS.forEach(id=>st.speed[id]=0);
     stageEmpty.classList.add("hidden"); stopBtn.disabled=false; flipBtn.disabled=false;
+    senseiVisibility();
     phaseEl.textContent="Kamae";
     requestAnimationFrame(loop);
   }catch(err){
     app.running=false; startBtn.textContent="Start camera";
     stageEmpty.classList.remove("hidden");
+    senseiVisibility();
     emptyMsg.textContent="Camera or model failed to start. Allow camera access and make sure the page is served over HTTPS (GitHub Pages is).";
     console.error(err);
   }
@@ -494,6 +619,7 @@ function stopCamera(){
   ctx.clearRect(0,0,overlay.width,overlay.height);
   phaseEl.textContent="Camera off"; startBtn.textContent="Start camera";
   stopBtn.disabled=true; flipBtn.disabled=true; stageEmpty.classList.remove("hidden");
+  senseiVisibility();
 }
 let loopToken=0;
 function loop(){
@@ -533,12 +659,14 @@ function seg(id,cb){ $(id).addEventListener("click",e=>{ const b=e.target.closes
   [...e.currentTarget.children].forEach(x=>x.classList.remove("sel")); b.classList.add("sel"); cb(b.dataset.v); }); }
 seg("#leadSeg", v=>cfg.lead=v);
 seg("#voiceSeg", v=>cfg.voice=(v==="on"));
+seg("#senseiSeg", v=>{ cfg.sensei=(v==="on"); senseiVisibility(); });
 $("#sens").addEventListener("input",e=>{ cfg.sensitivity=e.target.value/100;
   $("#sensVal").textContent=cfg.sensitivity<.34?"gentle":cfg.sensitivity<.67?"medium":"lively"; });
 document.querySelectorAll(".picker .card").forEach(card=>{
   card.addEventListener("click",()=>{
     document.querySelectorAll(".picker .card").forEach(c=>c.classList.remove("is-active"));
     card.classList.add("is-active"); cfg.focus=card.dataset.focus; document.body.dataset.focus=cfg.focus;
+    senseiSet(cfg.focus);
   });
 });
 window.addEventListener("resize",()=>{ if(app.running) fitCanvas(); });
